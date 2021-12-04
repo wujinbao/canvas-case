@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>五子棋</title>
+	<meta name="renderer" content="webkit" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<style type="text/css">
+		body {
+			background: #ccc;
+		}
+		canvas {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			margin: -225px 0 0 -225px;
+			background: #fff;
+			box-shadow: 5px 5px 100px #aaa;
+		}
+	</style>
+</head>
+<body>
+	<div>
+		<canvas id="canvas">
+			Your browser does not support the Canvas API.
+			Please upgrade your browser.
+		</canvas>
+	</div>
+
+	<script type="text/javascript">
+		var canvas = document.getElementById('canvas')
+		var context = canvas.getContext('2d')
+		canvas.width = 450
+		canvas.height = 450
+
+		// 初始化棋盘
+		function drawChessBoard() {
+			// 绘制 14 * 14 棋盘
+			context.beginPath()
+			for (var i = 0; i < 15; i++) {
+				// 横向
+				context.moveTo(15, 15 + 30 * i)
+				context.lineTo(435, 15 + 30 * i)
+
+				// 纵向
+				context.moveTo(15 + 30 * i, 15)
+				context.lineTo(15 + 30 * i, 435)
+			}
+			context.strokeStyle = "#666"
+			context.stroke()
+			context.closePath()
+
+			// 棋盘中心顶点位置
+			context.beginPath()
+			context.moveTo(215, 225)
+			context.lineTo(235, 225)
+			context.moveTo(225, 215)
+			context.lineTo(225, 235)
+			context.lineWidth = 2 
+			context.strokeStyle = "#000"
+			context.stroke()
+			context.closePath()
+		}
+		drawChessBoard()
+
+		var has = [] // 存储棋盘的所有顶点位置
+		// 获取棋盘的所有顶点位置，未落棋子时初始值为 0，自己落下棋子时值变为 1，电脑落下棋子时值变为 2，来以此辨别。
+		// 初始化顶点位置
+		function hasChess() {
+			for (var i = 0; i < 15; i++) {
+				has[i] = []
+				for (var j = 0; j < 15; j++) {
+					has[i][j] = 0
+				}
+			}
+		}
+		hasChess()
+
+		var allwins = [] // 存储所有顶点能赢的机会，它是三维数组，前面二维数组是顶点位置，而第三维数组值为 true 时的 index (即 count 第几种赢法)，否则值都是空。
+		var count = 0 // 统计一共多少种赢法，并以它作为这组赢法的标记
+		var mythiswin = [] // 自己 - 存储所有赢法，初始值为 0，达到 5 则胜利。
+		var pcthiswin = [] // 电脑 - 存储所有赢法，初始值为 0，达到 5 则胜利
+		// 初始化赢法
+		function CountallWins() {
+			for (var i = 0; i < 15; i++) {
+				allwins[i] = []
+				for (var j = 0; j < 15; j++) {
+					allwins[i][j] = []
+				}
+			}
+
+			// 胜利是五个棋盘连着，所以 k 是棋子数，count 统计赢法总数，也作为这组赢法的标记。
+			// 横 例：(0,0)-(1,0)-(2,0)-(3,0)-(4,0)
+			for (var i = 0; i < 15; i++) {
+				for (var j = 0; j < 11; j++) {
+					for (var k = 0; k < 5; k++) { 
+						allwins[j + k][i][count] = true
+					}
+					count++
+				}
+			}
+
+			// 竖 例：(0,0)-(0,1)-(0,2)-(0,3)-(0,4)
+			for (var i = 0; i < 15; i++) {
+				for (var j = 0; j < 11; j++) {
+					for (var k = 0; k < 5; k++) {
+						allwins[i][j + k][count] = true
+					}
+					count++
+				}
+			}
+
+			// 斜 例：(0,0)-(1,1)-(2,2)-(3,3)-(4,4)
+			for (var i = 0; i < 11; i++) {
+				for (var j = 0; j < 11; j++) {
+					for (var k = 0; k < 5; k++) {
+						allwins[i + k][j + k][count] = true
+					}
+					count++
+				}
+			}
+
+			// 反斜 例：(14,0)-(13,1)-(12,2)-(11,3)-(10,4)
+			for (var i = 14; i > 3; i--) {
+				for (var j = 0; j < 11; j++) {
+					for (var k = 0; k < 5; k++) {
+						allwins[i - k][j + k][count] = true
+					}
+					count++
+				}
+			}
+
+			// 一共 count = 572 种赢法
+			for (var i = 0; i <= count; i++) {
+				// 在每种赢法上的初始值为 0
+				mythiswin[i] = 0
+				pcthiswin[i] = 0
+			}
+		}
+		CountallWins()
+
+		// 绘制棋子 me 自己落子为黑色，电脑落子为白色。
+		function drawChess(i, j, me) {
+			context.beginPath()
+			context.arc(30 * i + 15, 30 * j + 15, 13, 0, Math.PI * 2)
+			// createRadialGradient 创建放射状 / 圆形渐变对象。
+			var gradient = context.createRadialGradient(30 * i + 15, 30 * j + 15, 13, 30 * i + 15, 30 * j + 15, 0)
+			if (me) {
+				gradient.addColorStop(0, "#0a0a0a")
+				gradient.addColorStop(1, "#636766")
+			}
+			else {
+				gradient.addColorStop(0, "#b1b1b1")
+				gradient.addColorStop(1, "#f9f9f9")
+			}
+			context.fillStyle = gradient
+			context.fill()
+			context.closePath()
+		}
+
+		var me = true // 自己落子
+		var over = false // 是否胜利
+		canvas.onclick = function(e) {
+			if (over) {
+				return
+			}
+			if (!me) {
+				return
+			}
+			var x = e.offsetX // 点击画布获取的横坐标
+			var y = e.offsetY // 点击画布获取的纵坐标
+			var i = Math.floor(x / 30) // 取最大整数，确保为顶点位置
+			var j = Math.floor(y / 30) // 取最大整数，确保为顶点位置
+			if (has[i][j] == 0) { // 顶点值为 0 时，是空位置。
+				drawChess(i, j, true)  // 绘制棋子，true 为自己落子
+				has[i][j] = 1 // 更改顶点值为 1，是自己落子位置
+
+				for (var k = 0; k <= count; k++) { // k 是这种赢法的棋子标记，也就是 allwins[i][j] 是顶点位置，这个顶点能赢的标记中 mythiswin[k] 都 +1。pcthiswin[k] 则失去这种赢法了，值设为 50（值设为大于 5 即可）,也就是 pcthiswin[k] 永远不会等于 5。
+					if (allwins[i][j][k]) {
+						mythiswin[k]++
+						pcthiswin[k] = 50
+						if (mythiswin[k] == 5) { // 值为 5 时，即这种赢法的五个标记棋子都已触发。
+							alert("恭喜你，你赢了！")
+							over = true
+						}
+					}
+				}
+				if (!over) { // 还没获胜，则电脑落子。
+					me = !me
+					AI() // 电脑落子函数
+				}
+			}
+		}
+
+		// 电脑落子
+		function AI() {
+    		// 所有顶点位置落子的价值
+    		var myScore = [] // 自己落子价值,初始值设为 0
+    		var pcScore = [] // 电脑落子价值,初始值设为 0
+    		var max = 0 // 落子最大价值
+    		var u = 0 // 落子最大价值的顶点横坐标
+    		var v = 0 // 落子最大价值的顶点纵坐标
+    		for (var i = 0; i < 15; i++) {
+    			myScore[i] = []
+    			pcScore[i] = []
+    			for (var j = 0; j < 15; j++) {
+            		// 初始值设为 0
+            		myScore[i][j] = 0
+            		pcScore[i][j] = 0
+            	}
+            }
+
+            // 循环所有顶点，但只比较未落子位置的价值
+            for (var i = 0; i < 15; i++) {
+            	for (var j = 0;j < 15; j++) {
+            		if (has[i][j] == 0) { // 空位置进入
+            			for (var k = 0; k <= count; k++) {
+            				if (allwins[i][j][k]) { // 根据该位置赢法被触发几次来提升价值，因为电脑落子是比较用户落子价值来进行落子的。所以赢法触发次数相同情况下，电脑落子价值比用户落子价值设高一点点，（比如最简单的用户赢法触发了 4 次，即已有 4 个棋子相连，而电脑赢法也触发了 4 次，现在也是到电脑落子了，当然落到电脑自身能赢的位置上。）
+            					if (mythiswin[k] == 1) {
+            						myScore[i][j] += 200
+            					} else if (mythiswin[k] == 2) {
+            						myScore[i][j] += 400
+            					} else if (mythiswin[k] == 3) {
+            						myScore[i][j] += 1000
+            					} else if (mythiswin[k] == 4) {
+            						myScore[i][j] += 10000
+            					}
+
+            					if (pcthiswin[k] == 1) {
+            						pcScore[i][j] += 220
+            					} else if (pcthiswin[k] == 2) {
+            						pcScore[i][j] += 420
+            					} else if (pcthiswin[k] == 3) {
+            						pcScore[i][j] += 1100
+            					} else if (pcthiswin[k] == 4) {
+            						pcScore[i][j] += 20000
+            					}
+            				}
+            			}
+
+            			if (myScore[i][j] > max) { // 先比较用户在该落子位置是否大于落子最大价值，若大于则 max 更改为用户在该落子位置价值。并更新落子最大价值的顶点位置。
+            				max = myScore[i][j]
+            				u = i
+            				v = j
+            			} 
+
+            			if (pcScore[i][j] > max) { // 再比较电脑在该落子位置是否大于落子最大价值，若大于则 max 更改为电脑在该落子位置价值。并更新落子最大价值的顶点位置。
+            				max = pcScore[i][j]
+            				u = i
+            				v = j
+            			}
+            		}
+            	}
+            }
+
+            drawChess(u, v, false) // false 为电脑落子
+            has[u][v] = 2 // 更改顶点值为 2，是电脑落子位置
+
+            for (var k = 0; k <= count; k++) { // 跟用户落子判定胜利一样
+            	if (allwins[u][v][k]) {
+            		pcthiswin[k]++
+            		mythiswin[k] = 60
+            		if (pcthiswin[k] == 5) {
+            			alert("很遗憾，电脑赢！")
+            			over = true
+            		}
+            	}
+            }
+
+            if (!over) { // 未胜利则轮到用户落子
+            	me = !me
+            }
+        }
+	</script>
+</body>
+</html>
