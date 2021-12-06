@@ -36,7 +36,7 @@
 
 		// 初始化棋盘
 		function drawChessBoard() {
-			// 绘制 14 * 14 棋盘
+			// 绘制 15 * 15 棋盘
 			context.beginPath()
 			for (var i = 0; i < 15; i++) {
 				// 横向
@@ -211,7 +211,7 @@
             	}
             }
 
-            // 循环所有顶点，但只比较未落子位置的价值
+            // 循环所有顶点，获取最大价值的落子位置。但只比较未落子位置的价值
             for (var i = 0; i < 15; i++) {
             	for (var j = 0;j < 15; j++) {
             		if (has[i][j] == 0) { // 空位置进入
@@ -257,7 +257,7 @@
             drawChess(u, v, false) // false 为电脑落子
             has[u][v] = 2 // 更改顶点值为 2，是电脑落子位置
 
-            for (var k = 0; k <= count; k++) { // 跟用户落子判定胜利一样
+            for (var k = 0; k <= count; k++) { // 跟用户落子判定胜利模式一样
             	if (allwins[u][v][k]) {
             		pcthiswin[k]++
             		mythiswin[k] = 60
