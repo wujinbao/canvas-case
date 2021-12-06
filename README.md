@@ -20,6 +20,6 @@
 
 ### 3. 动态离子背景效果
 
-#### [ [源码](https://github.com/wujinbao/canvas-case/tree/master/dynamic-ion)  |  [演示](https://wujinbao.github.io/canvas-case/dynamic-ion/index.html) ]
+#### [ [源码](https://github.com/wujinbao/canvas-case/tree/master/dynamicIon)  |  [演示](https://wujinbao.github.io/canvas-case/dynamicIon/index.html) ]
 
-![效果图展示](https://wujinbao.github.io/canvas-case/images/dynamic-ion.png)
+![效果图展示](https://wujinbao.github.io/canvas-case/images/dynamicIon.png)
