@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+
+    <title>树的生长</title>
+
+    <style type="text/css">
+        body {
+            padding: 0;
+            margin: 0;
+            background: #fff;
+        }
+        canvas {
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas">
+        Your browser does not support the Canvas API.
+        Please upgrade your browser.
+    </canvas>
+
+    <script type="text/javascript">
+        var canvas = document.getElementById('canvas')
+        var ctx = canvas.getContext('2d')
+        canvas.width = window.innerWidth // 设置画布宽度为窗口宽度
+        canvas.height = window.innerHeight - 30 // 设置画布高度为窗口高度 - 30
+        var center_x = canvas.width / 2 // 树的中心位置
+        var stretch_factor = 600 / canvas.height // 生长系数
+        var y_speed = 3 / stretch_factor // 生长速度
+        ctx.globalCompositeOperation = "lighter" // 属性设置或返回如何将一个源（新的）图像绘制到目标（已有）的图像上 
+
+        // 创建构造对象（树）
+        var Tree = function () {
+            var branches = [] // 树枝
+            var timer // 定时器
+            this.stat = {
+                fork: 0, // 分叉数量
+                length: 0 // 树枝长度
+            }
+
+            this.addBranch = function (b) { // 增加树枝
+                branches.push(b)
+            }
+
+            this.removeBranch = function (b) { // 删除树枝
+                for (var i = 0; i < branches.length; i++) {
+                    if (branches[i] === b) {
+                        branches.splice(i, 1)
+                        return
+                    }
+                }
+            }
+
+            this.planting = function () { // 开始种植
+                timer = setInterval(function () {
+                    if (branches.length > 0) {
+                        for (var i = 0; i < branches.length; i++){
+                                branches[i].grow() // 树枝开始生长
+                            }
+                    } else {
+                        clearInterval(timer)
+                    }
+                }, 1000 / 30)
+            }
+
+            this.init = function (num) { // num 为初始化树枝数量
+                for (var i = 0; i < num; i++) {
+                    new Branch(new Vector(center_x, canvas.height), new Vector(Branch.random(-1, 1), -y_speed), 15 / stretch_factor, Branch.randomrgba(0, 255, 0.3))
+                }
+            }
+        }
+
+        // 创建构造对象（树枝）
+        var Branch = function (p, v, r, c) {
+            this.p = p || null // 树枝最开始位置坐标（也是生长后位置坐标）
+            this.v = v || null // 树枝生长距离位置坐标
+            this.r = r || 0 // 树枝大小（圆的半径）
+            this.length = 0 // 树枝生长距离长度
+            this.generation = 1 // 第几代树枝（分叉几次）
+            this.color = c || 'rgba(255,255,255,1.0)' // 树枝颜色
+            this.register() // 登记树枝在构造对象树上
+        }
+
+        Branch.prototype = {
+            register: function () { // 登记树枝在构造对象树上
+                tree.addBranch(this)
+            },
+
+            draw: function () { // 画圆，树是由很多圆所组成的
+                ctx.beginPath()
+                ctx.fillStyle = this.color
+                ctx.arc(this.p.x, this.p.y, this.r, 0, 2 * Math.PI, true)
+                ctx.fill()
+            },
+
+            modify: function () { // 修改树枝参数
+                var angle = 0.18 - (0.10 / this.generation) // 修改树枝生长弧度
+                this.p.add(this.v) // 修改树枝位置坐标
+                this.length += this.v.length() // 修改移动距离长度
+                this.r *= 0.99 // 修改树枝大小（半径）
+                this.v.rotate(Branch.random(-angle, angle)) // 修改树枝生长角度  
+                if (this.r < 0.8 || this.generation > 10) { // 树枝大小小于 0.8 或 树枝分叉到达了 10 次，则停止生长结出果实
+                    tree.removeBranch(this) // 删除该树枝
+                    var l = new Fruit(this.p, this.color) // new 一个果实对象
+                    l.draw() // 结出果实
+                }
+            },
+
+            fork: function () { // 树枝分叉
+                var p = this.length - Branch.random(100, 200) // 树枝长度控制在 100 - 200 范围内
+                if (p > 0) {
+                    var n = Math.round(Branch.random(1, 3)) // 随机分叉数量控制在 1 - 3 范围内
+                    tree.stat.fork += n - 1
+                    // fork 为 0 时，则不再分叉，停止生长。
+                    for (var i = 0; i < n; i++) { // 分叉后重新创建构造对象（Branch 树枝），并使 generation + 1 =
+                        Branch.clone(this)
+                    }
+
+                    tree.removeBranch(this) // 若不再分叉，则删除这树枝
+                }
+
+            },
+
+            grow: function () { // 开始生长
+                this.draw() // 画圆（树枝）
+                this.modify() // 修改树枝参数                
+                this.fork() // 是否分叉
+            }
+        }
+
+        Branch.random = function (min, max) { // 控制在 min - max 范围内
+            return Math.random() * (max - min) + min
+        }
+
+        Branch.clone = function (b) { // 树枝分叉克隆原树枝（即创建构造对象树枝 Branch）
+            var r = new Branch(new Vector(b.p.x, b.p.y), new Vector(b.v.x, b.v.y), b.r, b.color)
+            r.generation = b.generation + 1 // 树枝第几代 + 1
+            return r
+        }
+
+        Branch.rgba = function (r, g, b, a) { // 树枝颜色
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'
+        }
+
+        Branch.randomrgba = function (min, max, a) { // 随机树枝颜色
+            return Branch.rgba(Math.round(Branch.random(min, max)), Math.round(Branch.random(min, max)), Math.round(Branch.random(min, max)), a)
+        }
+
+        // 创建构造对象（树枝生长系数）
+        var Vector = function (x, y) { // 树枝生长位置坐标
+            this.x = x || 0
+            this.y = y || 0
+        }
+
+        Vector.prototype = {
+            add: function (v) { // 修改树枝生长位置
+                this.x += v.x
+                this.y += v.y
+                return this
+            },
+
+            length: function () { // 树枝生长长度
+                return Math.sqrt(this.x * this.x + this.y * this.y)
+            },
+
+            rotate: function (theta) { // 修改树枝生长角度
+                this.x = Math.cos(theta) * this.x - Math.sin(theta) * this.y
+                this.y = Math.sin(theta) * this.x + Math.cos(theta) * this.y
+                return this
+            }
+        }
+
+        // 创建构造对象（果实）
+        var Fruit = function (p, c) {
+            this.p = p || null // 果实位置坐标
+            this.c = c || 'rgba(255,255,255,1.0)' // 果实颜色
+        }
+
+        Fruit.prototype = {
+            draw: function () { // 画圆（即果实）
+                var that =  this
+                for (var i = 0; i < 5; i++) { // 循环 5 次绘制圆，半径分别 1 - 5。这样重叠部分，层度不一样表现出的颜色效果也不同。
+                    (function (r) {
+                        setTimeout(function () {
+                            ctx.beginPath()
+                            ctx.fillStyle = that.c
+                            ctx.arc(that.p.x, that.p.y, r, 0, 2 * Math.PI, true)
+                            ctx.fill()
+                        }, r * 60)
+                    })(i)
+                }
+            }
+        }
+
+        var tree = new Tree() // 初始化对象树
+        tree.init(3) // 初始化树枝数量
+        tree.planting() // 开始种植
+    </script>
+</body>
